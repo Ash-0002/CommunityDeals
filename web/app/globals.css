@@ -1,0 +1,36 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── Design tokens ── */
+:root {
+  --surface: #f1f5f9;
+  --card:    #ffffff;
+  --border:  #e2e8f0;
+  --muted:   #64748b;
+  --ink:     #0f172a;
+}
+
+.dark {
+  --surface: #0a0f1a;
+  --card:    #1e293b;
+  --border:  #334155;
+  --muted:   #94a3b8;
+  --ink:     #f1f5f9;
+}
+
+@layer base {
+  body {
+    @apply bg-surface text-ink antialiased;
+    font-family: "Plus Jakarta Sans", system-ui, sans-serif;
+    transition: background-color 0.15s, color 0.15s;
+  }
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+}
+
+@layer utilities {
+  .num { font-variant-numeric: tabular-nums; }
+}
