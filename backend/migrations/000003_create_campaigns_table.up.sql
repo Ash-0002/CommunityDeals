@@ -11,6 +11,8 @@
 --   • campaign_participants has a UNIQUE(campaign_id, user_id) constraint — the
 --     repository also uses SELECT FOR UPDATE so this acts as a second safety net.
 --   • Slugs are unique across the table and indexed for fast public-URL lookups.
+--   • Column set mirrors internal/domain/campaign.go exactly (`db:"..."` tags) —
+--     keep these two in sync when either changes.
 
 -- ─────────────────────────────────────────────────────────────
 -- 1. campaigns
@@ -18,11 +20,12 @@
 CREATE TABLE IF NOT EXISTS campaigns (
     id                  TEXT        PRIMARY KEY,
     community_id        TEXT        NOT NULL REFERENCES communities(id) ON DELETE CASCADE,
-    created_by_id       TEXT        NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+    vendor_id           TEXT        NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
 
-    title               TEXT        NOT NULL,
+    service_name        TEXT        NOT NULL,     -- e.g. "Car Washing"
+    title               TEXT        NOT NULL,     -- e.g. "Car Washing This Sunday"
     description         TEXT        NOT NULL DEFAULT '',
-    service_type        TEXT        NOT NULL,     -- e.g. "car_wash", "ac_servicing"
+    image_url           TEXT        NOT NULL DEFAULT '',
     slug                TEXT        NOT NULL UNIQUE,
 
     status              TEXT        NOT NULL DEFAULT 'DRAFT'
@@ -41,26 +44,13 @@ CREATE TABLE IF NOT EXISTS campaigns (
 
     -- Participation limits
     min_participants    INTEGER     NOT NULL DEFAULT 1 CHECK (min_participants >= 1),
-    max_participants    INTEGER                        CHECK (max_participants IS NULL OR max_participants >= min_participants),
+    max_participants    INTEGER     NOT NULL DEFAULT 0 CHECK (max_participants = 0 OR max_participants >= min_participants),
     participant_count   INTEGER     NOT NULL DEFAULT 0 CHECK (participant_count >= 0),
 
     -- Scheduling
-    service_date        TIMESTAMPTZ,
-    campaign_end_date   TIMESTAMPTZ,               -- when the campaign stops accepting joins
-    registration_deadline TIMESTAMPTZ,
-
-    -- Location
-    location_name       TEXT        NOT NULL DEFAULT '',
-    location_address    TEXT        NOT NULL DEFAULT '',
-    city                TEXT        NOT NULL DEFAULT '',
-    pin_code            TEXT        NOT NULL DEFAULT '',
-
-    -- Media & meta
-    image_url           TEXT        NOT NULL DEFAULT '',
-    vendor_name         TEXT        NOT NULL DEFAULT '',
-    vendor_id           TEXT,                      -- FK to vendors table (added in Vendor milestone)
-    terms_and_conditions TEXT       NOT NULL DEFAULT '',
-    notes               TEXT        NOT NULL DEFAULT '',
+    service_date        TIMESTAMPTZ NOT NULL,      -- when the service will be delivered
+    start_date           TIMESTAMPTZ NOT NULL,      -- when users can start joining
+    end_date             TIMESTAMPTZ NOT NULL,      -- deadline for joining
 
     created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at          TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -70,23 +60,23 @@ CREATE TABLE IF NOT EXISTS campaigns (
 CREATE INDEX IF NOT EXISTS idx_campaigns_community_id  ON campaigns(community_id);
 CREATE INDEX IF NOT EXISTS idx_campaigns_status        ON campaigns(status);
 CREATE INDEX IF NOT EXISTS idx_campaigns_slug          ON campaigns(slug);
-CREATE INDEX IF NOT EXISTS idx_campaigns_created_by    ON campaigns(created_by_id);
+CREATE INDEX IF NOT EXISTS idx_campaigns_vendor_id     ON campaigns(vendor_id);
 CREATE INDEX IF NOT EXISTS idx_campaigns_service_date  ON campaigns(service_date);
-CREATE INDEX IF NOT EXISTS idx_campaigns_end_date      ON campaigns(campaign_end_date);
+CREATE INDEX IF NOT EXISTS idx_campaigns_end_date      ON campaigns(end_date);
 
 -- ─────────────────────────────────────────────────────────────
 -- 2. campaign_pricing_tiers
 -- ─────────────────────────────────────────────────────────────
 -- Each row is one price break-point. Example for a car-wash campaign:
---   tier_order=1  min_count=1   price=60000  (₹600 for 1–9 people)
---   tier_order=2  min_count=10  price=50000  (₹500 for 10–24 people)
---   tier_order=3  min_count=25  price=40000  (₹400 for 25+ people)
+--   tier_order=1  min_count=1   max_count=9    price=60000  (₹600 for 1–9 people)
+--   tier_order=2  min_count=10  max_count=24   price=50000  (₹500 for 10–24 people)
+--   tier_order=3  min_count=25  max_count=0    price=40000  (₹400 for 25+ people)
 CREATE TABLE IF NOT EXISTS campaign_pricing_tiers (
     id              TEXT        PRIMARY KEY,
     campaign_id     TEXT        NOT NULL REFERENCES campaigns(id) ON DELETE CASCADE,
     min_count       INTEGER     NOT NULL CHECK (min_count >= 1),
+    max_count       INTEGER     NOT NULL DEFAULT 0 CHECK (max_count = 0 OR max_count >= min_count), -- 0 = unlimited / last tier
     price           BIGINT      NOT NULL CHECK (price > 0),  -- in paise
-    label           TEXT        NOT NULL DEFAULT '',         -- e.g. "Early bird", "Group deal"
     tier_order      INTEGER     NOT NULL,                    -- 1-based sort order
 
     created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -109,8 +99,8 @@ CREATE TABLE IF NOT EXISTS campaign_participants (
     campaign_id     TEXT        NOT NULL REFERENCES campaigns(id) ON DELETE CASCADE,
     user_id         TEXT        NOT NULL REFERENCES users(id)     ON DELETE CASCADE,
 
-    status          TEXT        NOT NULL DEFAULT 'ACTIVE'
-                        CHECK (status IN ('ACTIVE', 'LEFT', 'PAYMENT_PENDING', 'PAYMENT_COMPLETED', 'CANCELLED')),
+    status          TEXT        NOT NULL DEFAULT 'JOINED'
+                        CHECK (status IN ('JOINED', 'LEFT', 'CANCELLED')),
 
     -- Price locked at the moment the user joined (in paise). This never
     -- changes once set — the user always pays what was shown when they joined.

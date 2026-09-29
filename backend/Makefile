@@ -1,6 +1,6 @@
 # Community Platform — Backend Makefile
 
-.PHONY: run build test docker-up docker-down migrate-up migrate-down lint tidy
+.PHONY: run build seed test docker-up docker-down migrate-up migrate-down lint tidy
 
 ## ── Development ──────────────────────────────────────────────────────────────
 
@@ -11,6 +11,10 @@ run:
 # Build the binary
 build:
 	CGO_ENABLED=0 go build -o bin/server ./cmd/server
+
+# Populate demo data (users, a community, 3 campaigns with joins) — safe to re-run
+seed:
+	go run ./cmd/seed
 
 # Run all tests
 test:

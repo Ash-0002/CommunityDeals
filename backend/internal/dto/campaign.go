@@ -15,6 +15,7 @@ type CreateCampaignRequest struct {
 	ServiceName     string             `json:"service_name"     binding:"required,min=2,max=100"`
 	Title           string             `json:"title"            binding:"required,min=2,max=200"`
 	Description     string             `json:"description"      binding:"omitempty,max=1000"`
+	ImageURL        string             `json:"image_url"        binding:"omitempty,max=500"`
 	MinParticipants int                `json:"min_participants" binding:"required,min=1"`
 	MaxParticipants int                `json:"max_participants" binding:"min=0"` // 0 = no cap
 	ServiceDate     string             `json:"service_date"     binding:"required"` // RFC3339
@@ -83,6 +84,7 @@ type CampaignListItem struct {
 	ID               string `json:"id"`
 	Title            string `json:"title"`
 	ServiceName      string `json:"service_name"`
+	ImageURL         string `json:"image_url,omitempty"`
 	Status           string `json:"status"`
 	ParticipantCount int    `json:"participant_count"`
 	MinParticipants  int    `json:"min_participants"`
@@ -90,6 +92,20 @@ type CampaignListItem struct {
 	EndDate          string `json:"end_date"`
 	ServiceDate      string `json:"service_date"`
 	ShareURL         string `json:"share_url"`
+	IsJoined         bool   `json:"is_joined"`
+	// FirstTierPrice is the un-discounted (tier 1) price — lets clients show
+	// "you're saving ₹X" for a joined campaign without a second round-trip.
+	FirstTierPrice int64 `json:"first_tier_price"`
+}
+
+// ParticipantResponse is a safe view of a campaign participant, enriched
+// with the joined user's display name/avatar — used to render the
+// "N people joined" avatar stack on campaign detail screens.
+type ParticipantResponse struct {
+	UserID    string `json:"user_id"`
+	Name      string `json:"name"`
+	AvatarURL string `json:"avatar_url,omitempty"`
+	JoinedAt  string `json:"joined_at"`
 }
 
 // JoinCampaignResponse is returned when a user successfully joins.

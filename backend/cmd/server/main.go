@@ -65,12 +65,12 @@ func main() {
 	// Services
 	authSvc      := service.NewAuthService(userRepo, rdb, cfg)
 	communitySvc := service.NewCommunityService(communityRepo, userRepo)
-	campaignSvc  := service.NewCampaignService(campaignRepo, communityRepo)
+	campaignSvc  := service.NewCampaignService(campaignRepo, communityRepo, cfg.AppBaseURL)
 
 	// Handlers
 	authHandler      := handler.NewAuthHandler(authSvc)
 	communityHandler := handler.NewCommunityHandler(communitySvc)
-	campaignHandler  := handler.NewCampaignHandler(campaignSvc)
+	campaignHandler  := handler.NewCampaignHandler(campaignSvc, userRepo)
 
 	// ── 6. Build router ───────────────────────────────────────────────────────
 	router := handler.NewRouter(handler.Dependencies{

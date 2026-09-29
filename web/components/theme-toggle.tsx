@@ -1,5 +1,6 @@
 "use client";
 
+import { Sun, Moon } from "lucide-react";
 import { useTheme } from "./theme-provider";
 
 export function ThemeToggle() {
@@ -8,9 +9,9 @@ export function ThemeToggle() {
     <button
       onClick={toggle}
       title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-      className="flex h-8 w-8 items-center justify-center rounded-lg text-base text-white/40 transition-colors hover:bg-white/10 hover:text-white/80"
+      className="flex h-7 w-7 items-center justify-center rounded-md text-muted transition-colors hover:bg-surface hover:text-ink"
     >
-      {theme === "dark" ? "☀️" : "🌙"}
+      {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
     </button>
   );
 }

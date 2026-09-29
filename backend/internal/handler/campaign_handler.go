@@ -7,6 +7,7 @@ import (
 	"github.com/community-platform/backend/internal/domain"
 	"github.com/community-platform/backend/internal/dto"
 	"github.com/community-platform/backend/internal/middleware"
+	"github.com/community-platform/backend/internal/repository"
 	"github.com/community-platform/backend/internal/service"
 	"github.com/community-platform/backend/pkg/response"
 	"github.com/gin-gonic/gin"
@@ -15,11 +16,12 @@ import (
 // CampaignHandler handles all campaign-related HTTP endpoints.
 type CampaignHandler struct {
 	campaignSvc service.CampaignService
+	userRepo    repository.UserRepository
 }
 
 // NewCampaignHandler creates a CampaignHandler.
-func NewCampaignHandler(campaignSvc service.CampaignService) *CampaignHandler {
-	return &CampaignHandler{campaignSvc: campaignSvc}
+func NewCampaignHandler(campaignSvc service.CampaignService, userRepo repository.UserRepository) *CampaignHandler {
+	return &CampaignHandler{campaignSvc: campaignSvc, userRepo: userRepo}
 }
 
 // CreateCampaign godoc
@@ -101,7 +103,7 @@ func (h *CampaignHandler) ListCampaigns(c *gin.Context) {
 		return
 	}
 
-	result, err := h.campaignSvc.List(c.Request.Context(), query)
+	result, err := h.campaignSvc.List(c.Request.Context(), query, middleware.GetUserID(c))
 	if err != nil {
 		response.InternalError(c)
 		return
@@ -176,8 +178,24 @@ func (h *CampaignHandler) ListParticipants(c *gin.Context) {
 		return
 	}
 
+	// Enrich each participant with their display name/avatar for the
+	// "N people joined" avatar-stack UI. Best-effort — a lookup failure
+	// just falls back to an empty name rather than failing the request.
+	enriched := make([]dto.ParticipantResponse, 0, len(participants))
+	for _, p := range participants {
+		item := dto.ParticipantResponse{
+			UserID:   p.UserID,
+			JoinedAt: p.JoinedAt.Format("2006-01-02T15:04:05Z07:00"),
+		}
+		if user, err := h.userRepo.FindByID(c.Request.Context(), p.UserID); err == nil {
+			item.Name = user.Name
+			item.AvatarURL = user.AvatarURL
+		}
+		enriched = append(enriched, item)
+	}
+
 	response.OK(c, "Participants fetched", gin.H{
-		"participants": participants,
+		"participants": enriched,
 		"total":        total,
 		"page":         page,
 		"limit":        limit,

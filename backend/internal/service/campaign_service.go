@@ -30,7 +30,7 @@ type CampaignService interface {
 	Create(ctx context.Context, creatorID string, req dto.CreateCampaignRequest) (*dto.CampaignResponse, error)
 	GetByID(ctx context.Context, id, requestingUserID string) (*dto.CampaignResponse, error)
 	GetBySlug(ctx context.Context, slug, requestingUserID string) (*dto.CampaignResponse, error)
-	List(ctx context.Context, filter dto.ListCampaignsQuery) (*dto.PaginatedCampaignsResponse, error)
+	List(ctx context.Context, filter dto.ListCampaignsQuery, requestingUserID string) (*dto.PaginatedCampaignsResponse, error)
 	Join(ctx context.Context, campaignID, userID string) (*dto.JoinCampaignResponse, error)
 	Leave(ctx context.Context, campaignID, userID string) error
 	UpdateStatus(ctx context.Context, campaignID, requestingUserID string, newStatus domain.CampaignStatus) error
@@ -40,13 +40,19 @@ type CampaignService interface {
 type campaignService struct {
 	campaignRepo  repository.CampaignRepository
 	communityRepo repository.CommunityRepository
+	appBaseURL    string
 }
 
 // NewCampaignService creates a CampaignService with all dependencies injected.
-func NewCampaignService(campaignRepo repository.CampaignRepository, communityRepo repository.CommunityRepository) CampaignService {
+// appBaseURL is used to build shareable campaign links, e.g. "https://communitydeals.app".
+func NewCampaignService(campaignRepo repository.CampaignRepository, communityRepo repository.CommunityRepository, appBaseURL string) CampaignService {
+	if appBaseURL == "" {
+		appBaseURL = "http://localhost:3000"
+	}
 	return &campaignService{
 		campaignRepo:  campaignRepo,
 		communityRepo: communityRepo,
+		appBaseURL:    strings.TrimSuffix(appBaseURL, "/"),
 	}
 }
 
@@ -101,6 +107,7 @@ func (s *campaignService) Create(ctx context.Context, creatorID string, req dto.
 		ServiceName:      strings.TrimSpace(req.ServiceName),
 		Title:            strings.TrimSpace(req.Title),
 		Description:      strings.TrimSpace(req.Description),
+		ImageURL:         strings.TrimSpace(req.ImageURL),
 		MinParticipants:  req.MinParticipants,
 		MaxParticipants:  req.MaxParticipants,
 		ServiceDate:      serviceDate,
@@ -172,7 +179,7 @@ func (s *campaignService) GetBySlug(ctx context.Context, slug, requestingUserID 
 }
 
 // List returns a paginated list of campaigns with optional filters.
-func (s *campaignService) List(ctx context.Context, q dto.ListCampaignsQuery) (*dto.PaginatedCampaignsResponse, error) {
+func (s *campaignService) List(ctx context.Context, q dto.ListCampaignsQuery, requestingUserID string) (*dto.PaginatedCampaignsResponse, error) {
 	filter := repository.CampaignFilter{
 		CommunityID: q.CommunityID,
 		Status:      q.Status,
@@ -189,17 +196,28 @@ func (s *campaignService) List(ctx context.Context, q dto.ListCampaignsQuery) (*
 	for _, c := range campaigns {
 		tiers, _ := s.campaignRepo.GetPricingTiers(ctx, c.ID)
 		currentPrice := calculateCurrentPrice(tiers, c.ParticipantCount)
+		isJoined := false
+		if requestingUserID != "" {
+			isJoined, _ = s.campaignRepo.IsParticipant(ctx, c.ID, requestingUserID)
+		}
+		firstTierPrice := currentPrice
+		if len(tiers) > 0 {
+			firstTierPrice = tiers[0].Price
+		}
 		items = append(items, dto.CampaignListItem{
 			ID:               c.ID,
 			Title:            c.Title,
 			ServiceName:      c.ServiceName,
+			ImageURL:         c.ImageURL,
 			Status:           string(c.Status),
 			ParticipantCount: c.ParticipantCount,
 			MinParticipants:  c.MinParticipants,
 			CurrentPrice:     currentPrice,
 			EndDate:          c.EndDate.Format(time.RFC3339),
 			ServiceDate:      c.ServiceDate.Format(time.RFC3339),
-			ShareURL:         buildShareURL(c.Slug),
+			ShareURL:         s.buildShareURL(c.Slug),
+			IsJoined:         isJoined,
+			FirstTierPrice:   firstTierPrice,
 		})
 	}
 
@@ -331,7 +349,7 @@ func (s *campaignService) buildCampaignResponse(
 		Status:           string(c.Status),
 		ParticipantCount: c.ParticipantCount,
 		Slug:             c.Slug,
-		ShareURL:         buildShareURL(c.Slug),
+		ShareURL:         s.buildShareURL(c.Slug),
 		PricingTiers:     tierResponses,
 		CurrentPrice:     currentPrice,
 		IsJoined:         isJoined,
@@ -393,9 +411,9 @@ func toTierResponse(t *domain.CampaignPricingTier) dto.PricingTierResponse {
 }
 
 // buildShareURL constructs the public shareable link for a campaign.
-// In production replace the base URL with your actual domain.
-func buildShareURL(slug string) string {
-	return fmt.Sprintf("https://app.communityplatform.com/campaign/%s", slug)
+// Uses the configured APP_BASE_URL (web app origin) and the `/c/:slug` route.
+func (s *campaignService) buildShareURL(slug string) string {
+	return fmt.Sprintf("%s/c/%s", s.appBaseURL, slug)
 }
 
 // generateSlug builds a URL-safe slug from a title, appending a short random suffix.

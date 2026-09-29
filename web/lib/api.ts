@@ -13,6 +13,7 @@ import type {
   JoinCampaignResponse,
   PaginatedCampaignsResponse,
   PaginatedCommunitiesResponse,
+  ParticipantResponse,
   UserResponse,
 } from "@/lib/types";
 
@@ -208,21 +209,24 @@ const campaigns = {
   leave: (id: string) =>
     request<void>(`/api/v1/campaigns/${id}/leave`, { method: "POST" }),
 
+  participants: (id: string, limit = 50) =>
+    request<{ participants: ParticipantResponse[]; total: number }>(
+      `/api/v1/campaigns/${id}/participants?limit=${limit}`,
+    ),
+
+  /** Mirrors the Go backend's CreateCampaignRequest exactly (dto/campaign.go). */
   create: (data: {
     community_id: string;
+    service_name: string;
     title: string;
     description?: string;
-    service_type: string;
+    image_url?: string;
     min_participants: number;
-    max_participants?: number;
-    campaign_end_date?: string;
-    service_date?: string;
-    pricing_tiers: Array<{ min_count: number; price: number; label?: string }>;
-    location_name?: string;
-    location_address?: string;
-    city?: string;
-    pin_code?: string;
-    vendor_name?: string;
+    max_participants?: number; // 0 = no cap
+    service_date: string; // RFC3339
+    start_date: string; // RFC3339
+    end_date: string; // RFC3339
+    pricing_tiers: Array<{ min_count: number; max_count: number; price: number }>;
   }) =>
     request<CampaignResponse>("/api/v1/campaigns", {
       method: "POST",

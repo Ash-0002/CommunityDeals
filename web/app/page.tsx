@@ -1,71 +1,66 @@
 // Landing page — root route "/"
-// Redirects logged-in users to /dashboard, shows marketing page otherwise.
 
 import Link from "next/link";
+import { ClipboardList, Share2, TrendingDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
+
+const STEPS = [
+  {
+    icon: ClipboardList,
+    title: "Admin creates a campaign",
+    desc: "Set the service, date, and group pricing tiers — e.g. 10+ people unlocks ₹500.",
+  },
+  {
+    icon: Share2,
+    title: "Share one link",
+    desc: "Anyone who opens it sees the campaign and the live participant count.",
+  },
+  {
+    icon: TrendingDown,
+    title: "Price drops as people join",
+    desc: "Hit the next tier and everyone gets the better price automatically.",
+  },
+];
 
 export default function LandingPage() {
   return (
-    <main className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-emerald-50">
-      {/* Nav */}
-      <nav className="mx-auto flex max-w-5xl items-center justify-between px-6 py-5">
-        <span className="text-xl font-bold text-primary-600">🏘 CommunityDeals</span>
-        <div className="flex gap-3">
-          <Link href="/auth/login">
-            <Button variant="outline" size="sm">Log in</Button>
-          </Link>
-        </div>
+    <main className="min-h-screen bg-surface">
+      <nav className="mx-auto flex max-w-4xl items-center justify-between px-6 py-5">
+        <span className="flex items-center gap-2 text-sm font-bold text-ink">
+          <span className="flex h-7 w-7 items-center justify-center rounded-md bg-primary-600 text-xs font-bold text-white">C</span>
+          CommunityDeals
+        </span>
+        <Link href="/auth/login">
+          <Button variant="outline" size="sm">Log in</Button>
+        </Link>
       </nav>
 
-      {/* Hero */}
-      <section className="mx-auto max-w-3xl px-6 py-20 text-center">
-        <span className="mb-4 inline-block rounded-full bg-primary-100 px-4 py-1 text-sm font-medium text-primary-700">
-          For housing societies &amp; apartments 🏢
+      <section className="mx-auto max-w-2xl px-6 py-20 text-center">
+        <span className="mb-5 inline-block rounded-full border border-border bg-card px-3.5 py-1 text-xs font-medium text-muted">
+          For housing societies &amp; apartments
         </span>
-        <h1 className="mb-6 text-4xl font-bold leading-tight text-gray-900 sm:text-5xl">
+        <h1 className="mb-5 text-4xl font-bold leading-tight text-ink sm:text-5xl">
           The more neighbours who join,
           <br />
-          <span className="text-primary-500">the less everyone pays.</span>
+          <span className="text-primary-600">the less everyone pays.</span>
         </h1>
-        <p className="mx-auto mb-10 max-w-xl text-lg text-gray-600">
-          Organise group deals for car washing, AC servicing, pest control and more.
-          Share one WhatsApp link — watch the price drop as your neighbours join.
+        <p className="mx-auto mb-9 max-w-lg text-base leading-relaxed text-muted">
+          Organise group deals for AC servicing, pest control, and more. Share one link —
+          watch the price drop as your neighbours join.
         </p>
-        <div className="flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
-          <Link href="/auth/login">
-            <Button size="lg">Get started free →</Button>
-          </Link>
-        </div>
+        <Link href="/auth/login">
+          <Button size="lg">Get started</Button>
+        </Link>
       </section>
 
-      {/* How it works */}
-      <section className="mx-auto max-w-4xl px-6 pb-24">
-        <h2 className="mb-10 text-center text-2xl font-bold text-gray-800">How it works</h2>
-        <div className="grid gap-6 sm:grid-cols-3">
-          {[
-            {
-              step: "1",
-              title: "Admin creates a campaign",
-              desc: "Set the service, date, and group pricing tiers (e.g. 10+ people → ₹500).",
-              icon: "📋",
-            },
-            {
-              step: "2",
-              title: "Share on WhatsApp",
-              desc: "One link. Anyone who clicks it sees the campaign and the live count.",
-              icon: "💬",
-            },
-            {
-              step: "3",
-              title: "Price drops as people join",
-              desc: "Hit the next tier → everyone gets the better price automatically.",
-              icon: "🎉",
-            },
-          ].map((item) => (
-            <div key={item.step} className="card p-6 text-center">
-              <div className="mb-4 text-4xl">{item.icon}</div>
-              <h3 className="mb-2 font-semibold text-gray-900">{item.title}</h3>
-              <p className="text-sm text-gray-600">{item.desc}</p>
+      <section className="mx-auto max-w-3xl px-6 pb-24">
+        <h2 className="mb-8 text-center text-lg font-bold text-ink">How it works</h2>
+        <div className="grid gap-4 sm:grid-cols-3">
+          {STEPS.map((step) => (
+            <div key={step.title} className="rounded-xl border border-border bg-card p-5">
+              <step.icon className="mb-3 h-5 w-5 text-primary-600" strokeWidth={2} />
+              <h3 className="mb-1.5 text-sm font-semibold text-ink">{step.title}</h3>
+              <p className="text-[13px] leading-relaxed text-muted">{step.desc}</p>
             </div>
           ))}
         </div>

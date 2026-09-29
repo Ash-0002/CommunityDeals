@@ -1,76 +1,53 @@
 import Link from "next/link";
-import type { CampaignResponse } from "@/lib/types";
+import { Check } from "lucide-react";
+import type { CampaignListItem } from "@/lib/types";
+import { formatPaise, daysLeft } from "@/lib/format";
+import { StatusChip } from "./status-chip";
+import { ProgressBar } from "@/components/ui/progress-bar";
 
-const GRADIENTS: Record<string, string> = {
-  AC_SERVICE:   "from-sky-700 to-sky-900",
-  PEST_CONTROL: "from-red-700 to-red-900",
-  WATER_TANK:   "from-violet-700 to-violet-900",
-  CAR_WASH:     "from-amber-600 to-orange-900",
-  PLUMBING:     "from-slate-600 to-slate-900",
-  ELECTRICAL:   "from-yellow-600 to-yellow-900",
-};
-const DEFAULT_GRADIENT = "from-slate-600 to-slate-900";
-
-function statusChip(c: CampaignResponse) {
-  const needed = c.min_participants - c.participant_count;
-  if (c.status === "CONFIRMED" || c.status === "MINIMUM_REACHED")
-    return { label: "Group locked ✓", cls: "bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300" };
-  if (needed <= 3 && needed > 0)
-    return { label: `${needed} more needed`, cls: "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300" };
-  return { label: "Open", cls: "bg-primary-100 text-primary-700 dark:bg-primary-900/40 dark:text-primary-300" };
-}
-
-function formatPrice(paise: number) {
-  return `₹${(paise / 100).toLocaleString("en-IN")}`;
-}
-
-export function CampaignCard({ campaign }: { campaign: CampaignResponse }) {
-  const gradient = GRADIENTS[campaign.service_type] ?? DEFAULT_GRADIENT;
-  const fill = Math.min(100, Math.round((campaign.participant_count / campaign.min_participants) * 100));
-  const chip = statusChip(campaign);
-  const date = campaign.service_date
-    ? new Date(campaign.service_date).toLocaleDateString("en-IN", { day: "numeric", month: "short" })
-    : null;
+export function CampaignCard({ campaign }: { campaign: CampaignListItem }) {
+  const progress = campaign.min_participants === 0 ? 0 : campaign.participant_count / campaign.min_participants;
+  const ending = daysLeft(campaign.end_date);
+  const unlocked = campaign.min_participants > 0 && campaign.participant_count >= campaign.min_participants;
 
   return (
-    <Link href={`/c/${campaign.slug}`} className="group block">
-      <div className="overflow-hidden rounded-2xl bg-card shadow-card transition-shadow group-hover:shadow-card-hover">
-        {/* Coloured header */}
-        <div className={`relative bg-gradient-to-br ${gradient} p-3 pt-8`}>
-          <div className="absolute left-3 top-3 rounded-full border border-white/20 bg-white/15 px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white backdrop-blur-sm">
-            {campaign.service_type.replace(/_/g, " ")}
-          </div>
-          <p className="text-lg font-extrabold leading-snug text-white">{campaign.title}</p>
-          {campaign.community_name && (
-            <p className="mt-0.5 text-[11px] font-medium text-white/60">{campaign.community_name}</p>
-          )}
-        </div>
-
-        {/* Body */}
-        <div className="p-3.5">
-          <div className="mb-2 flex items-baseline justify-between">
-            <span className="num text-xl font-extrabold text-ink">
-              {campaign.participant_count}
-              <span className="text-sm font-semibold text-muted"> / {campaign.min_participants}</span>
+    <Link href={`/campaigns/${campaign.id}`} className="block">
+      <div className="overflow-hidden rounded-xl border border-border bg-card transition-colors hover:border-primary-600/40">
+        {campaign.image_url && (
+          <div className="relative h-28 w-full">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={campaign.image_url} alt="" className="h-full w-full object-cover" />
+            <span className="absolute right-2 top-2">
+              <StatusChip status={campaign.status} />
             </span>
-            <span className="num text-base font-extrabold text-primary-600">{formatPrice(campaign.current_price)}</span>
+            {unlocked && (
+              <span className="absolute left-2 top-2 inline-flex items-center gap-1 rounded-full bg-white/95 px-2 py-1 text-[10.5px] font-extrabold text-primary-700">
+                <Check className="h-3 w-3" strokeWidth={3} />
+                Unlocked
+              </span>
+            )}
+          </div>
+        )}
+        <div className="p-4">
+          <div className="mb-2 flex items-start justify-between gap-2">
+            <div className="min-w-0">
+              <p className="truncate text-[14px] font-semibold text-ink">{campaign.title}</p>
+              <p className="text-[12px] text-muted">{campaign.service_name}</p>
+            </div>
+            {!campaign.image_url && <StatusChip status={campaign.status} />}
           </div>
 
-          <div className="mb-3 h-1 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-700">
-            <div
-              className="h-full rounded-full bg-gradient-to-r from-primary-600 to-primary-400 transition-all"
-              style={{ width: `${fill}%` }}
-            />
+          <div className="mb-2 mt-3">
+            <ProgressBar value={progress} />
           </div>
 
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-medium text-muted">
-              {date ? `📍 ${date}` : "📍 Date TBD"}
+            <span className="text-[12px] font-medium text-muted">
+              {campaign.participant_count}/{campaign.min_participants} joined
             </span>
-            <span className={`rounded-full px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wide ${chip.cls}`}>
-              {chip.label}
-            </span>
+            <span className="text-[14px] font-bold text-primary-600">{formatPaise(campaign.current_price)}</span>
           </div>
+          {ending && <p className="mt-1.5 text-[11px] text-muted">{ending}</p>}
         </div>
       </div>
     </Link>

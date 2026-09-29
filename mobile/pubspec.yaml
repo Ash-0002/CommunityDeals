@@ -1,0 +1,39 @@
+name: community_deals
+description: CommunityDeals — group buying & service booking for housing societies.
+publish_to: "none"
+version: 1.0.0+1
+
+environment:
+  sdk: ">=3.4.0 <4.0.0"
+  flutter: ">=3.22.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+
+  # Networking
+  dio: ^5.7.0
+
+  # State management
+  provider: ^6.1.2
+
+  # Routing
+  go_router: ^14.6.2
+
+  # Secure token storage
+  flutter_secure_storage: ^9.2.2
+
+  # Formatting (currency / dates)
+  intl: ^0.19.0
+
+  # Native share sheet (share campaign links)
+  share_plus: ^10.1.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+
+flutter:
+  uses-material-design: true

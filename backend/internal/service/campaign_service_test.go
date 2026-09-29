@@ -256,7 +256,7 @@ func setupSvc(communityID string) (service.CampaignService, *fakeCampaignRepo) {
 		},
 	}
 	fakeCamp := newFakeCampaignRepo()
-	svc := service.NewCampaignService(fakeCamp, fakeComm)
+	svc := service.NewCampaignService(fakeCamp, fakeComm, "")
 	return svc, fakeCamp
 }
 

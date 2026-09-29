@@ -10,12 +10,13 @@ import (
 
 // Config holds all application configuration.
 type Config struct {
-	Env      string
-	Port     string
-	Database DatabaseConfig
-	Redis    RedisConfig
-	JWT      JWTConfig
-	OTP      OTPConfig
+	Env        string
+	Port       string
+	AppBaseURL string
+	Database   DatabaseConfig
+	Redis      RedisConfig
+	JWT        JWTConfig
+	OTP        OTPConfig
 }
 
 type DatabaseConfig struct {
@@ -64,8 +65,9 @@ func Load() (*Config, error) {
 	_ = godotenv.Load() // ignore error — .env is optional in production
 
 	return &Config{
-		Env:  env("APP_ENV", "development"),
-		Port: env("APP_PORT", "8080"),
+		Env:        env("APP_ENV", "development"),
+		Port:       env("APP_PORT", "8080"),
+		AppBaseURL: env("APP_BASE_URL", "http://localhost:3000"),
 		Database: DatabaseConfig{
 			Host:     env("DB_HOST", "localhost"),
 			Port:     env("DB_PORT", "5432"),

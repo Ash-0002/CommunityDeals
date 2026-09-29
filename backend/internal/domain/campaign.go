@@ -1,6 +1,9 @@
 package domain
 
-import "time"
+import (
+	"database/sql"
+	"time"
+)
 
 // CampaignStatus represents the full lifecycle of a campaign.
 // Transitions are strictly enforced in the service layer.
@@ -139,6 +142,8 @@ type CampaignPricingTier struct {
 	MaxCount   int    `db:"max_count"` // inclusive upper bound (0 = unlimited)
 	Price      int64  `db:"price"`     // price in paise (₹500 = 50000 paise) — use integers, never floats for money
 	TierOrder  int    `db:"tier_order"` // display/sort order, starting from 1
+
+	CreatedAt time.Time `db:"created_at"`
 }
 
 // CampaignParticipant records a user's membership in a campaign.
@@ -149,9 +154,10 @@ type CampaignParticipant struct {
 	Status     ParticipantStatus `db:"status"`
 	// Price locked when the user joined (in paise)
 	// Stored so we know what to charge even if tier changes later.
-	PriceLocked int64     `db:"price_locked"`
-	JoinedAt    time.Time `db:"joined_at"`
-	UpdatedAt   time.Time `db:"updated_at"`
+	PriceLocked int64        `db:"price_locked"`
+	JoinedAt    time.Time    `db:"joined_at"`
+	LeftAt      sql.NullTime `db:"left_at"`
+	UpdatedAt   time.Time    `db:"updated_at"`
 }
 
 // IsActive returns true when the participant is still in the campaign.

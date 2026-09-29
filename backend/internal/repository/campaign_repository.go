@@ -36,7 +36,7 @@ type CampaignRepository interface {
 	CreatePricingTiers(ctx context.Context, tiers []*domain.CampaignPricingTier) error
 	GetPricingTiers(ctx context.Context, campaignID string) ([]*domain.CampaignPricingTier, error)
 
-	// Participants — the JOIN logic uses SELECT FOR UPDATE to prevent race conditions
+			// Participants — the JOIN logic uses SELECT FOR UPDATE to prevent race conditions
 	JoinCampaign(ctx context.Context, campaignID, userID string) (*domain.CampaignParticipant, int, error)
 	LeaveCampaign(ctx context.Context, campaignID, userID string) (int, error)
 	FindParticipant(ctx context.Context, campaignID, userID string) (*domain.CampaignParticipant, error)

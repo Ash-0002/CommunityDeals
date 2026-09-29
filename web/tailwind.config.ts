@@ -21,7 +21,6 @@ const config: Config = {
           800: "#166534",
           900: "#14532d",
         },
-        sidebar: "#0f172a",
         surface: "var(--surface)",
         card:    "var(--card)",
         border:  "var(--border)",
