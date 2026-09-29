@@ -143,15 +143,28 @@ export default function CreateCampaignPage() {
 
   return (
     <AppLayout>
-      <div className="flex items-center gap-3 border-b border-border bg-card px-6 py-4">
-        <button onClick={() => router.back()} className="rounded-md p-1 text-muted hover:bg-surface hover:text-ink">
-          <ChevronLeft className="h-4 w-4" />
-        </button>
-        <h1 className="text-sm font-semibold text-ink">Start a group deal</h1>
-      </div>
+      <button
+        onClick={() => router.back()}
+        className="mb-4 inline-flex items-center gap-1 rounded-full border border-border bg-card px-3.5 py-1.5 text-[13px] font-semibold text-muted transition-colors hover:text-ink"
+      >
+        <ChevronLeft className="h-4 w-4" />
+        Back
+      </button>
 
-      <div className="flex-1 overflow-y-auto px-6 py-6">
-        <form onSubmit={handleSubmit} className="mx-auto max-w-xl">
+      <div className="mx-auto max-w-2xl">
+        <div className="mb-6">
+          <p className="text-[13px] font-semibold uppercase tracking-[0.14em] text-muted">
+            New group deal
+          </p>
+          <h1 className="mt-1.5 text-[28px] font-extrabold leading-tight tracking-tight text-ink sm:text-[36px]">
+            Get your neighbours a better price
+          </h1>
+        </div>
+
+        <form
+          onSubmit={handleSubmit}
+          className="rounded-3xl border border-border bg-card p-5 shadow-card sm:p-7"
+        >
           {!loadingCommunities && communities.length === 0 && (
             <p className="mb-4 text-sm text-muted">
               Join a community first — deals are posted inside a community.
@@ -209,7 +222,7 @@ export default function CreateCampaignPage() {
             />
           </div>
 
-          <div className="mb-4 grid grid-cols-2 gap-3">
+          <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
             <Input
               label="Min. participants"
               type="number"
@@ -227,7 +240,7 @@ export default function CreateCampaignPage() {
             />
           </div>
 
-          <div className="mb-6 grid grid-cols-2 gap-3">
+          <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
             <Input
               label="Service date"
               type="date"
@@ -260,7 +273,7 @@ export default function CreateCampaignPage() {
 
           <div className="mb-6 flex flex-col gap-2">
             {tiers.map((tier, i) => (
-              <div key={i} className="flex items-center gap-2 rounded-lg border border-border bg-card p-3">
+              <div key={i} className="flex flex-wrap items-end gap-2 rounded-2xl border border-border p-3">
                 <TierNumberInput
                   label="From"
                   value={tier.minCount}
@@ -309,7 +322,7 @@ function TierNumberInput({
   onChange: (v: number) => void;
 }) {
   return (
-    <div className="flex-1">
+    <div className="min-w-[80px] flex-1">
       <label className="mb-1 block text-[11px] font-medium text-muted">{label}</label>
       <input
         type="number"

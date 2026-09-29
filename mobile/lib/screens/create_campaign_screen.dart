@@ -188,11 +188,22 @@ class _CreateCampaignScreenState extends State<CreateCampaignScreen> {
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 120),
               children: [
                 if (communities.isEmpty)
-                  const Padding(
-                    padding: EdgeInsets.only(bottom: 16),
-                    child: Text(
-                      'Join a community first — deals are posted inside a community.',
-                      style: TextStyle(color: AppColors.lightMuted),
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Deals are posted inside a society — join one first.',
+                          style: TextStyle(color: AppColors.lightMuted),
+                        ),
+                        const SizedBox(height: 10),
+                        OutlinedButton.icon(
+                          onPressed: () => context.push('/communities'),
+                          icon: const Icon(Icons.search, size: 16),
+                          label: const Text('Find your society'),
+                        ),
+                      ],
                     ),
                   )
                 else

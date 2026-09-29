@@ -9,20 +9,34 @@ import type { ParticipantResponse } from "@/lib/types";
 export function CampaignHeroBanner({
   imageUrl,
   label = "Group booking",
+  /** Sizing/rounding of the frame. Override for the editorial full-bleed hero. */
+  className = "aspect-[16/9] rounded-2xl",
+  /** Dark gradient overlay — needed when text sits on top of the image. */
+  scrim = false,
+  children,
 }: {
   imageUrl?: string;
-  label?: string;
+  label?: string | null;
+  className?: string;
+  scrim?: boolean;
+  children?: React.ReactNode;
 }) {
   return (
-    <div className="relative aspect-[16/9] w-full overflow-hidden rounded-2xl bg-gradient-to-br from-blue-50 to-sky-50 dark:from-blue-950/40 dark:to-sky-950/30">
+    <div
+      className={`relative w-full overflow-hidden bg-gradient-to-br from-primary-100 via-emerald-50 to-amber-50 dark:from-primary-900/40 dark:via-emerald-950/40 dark:to-amber-950/20 ${className}`}
+    >
       {imageUrl && (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={imageUrl} alt="" className="h-full w-full object-cover" />
+        <img src={imageUrl} alt="" className="absolute inset-0 h-full w-full object-cover" />
       )}
-      <span className="absolute left-3 top-3 inline-flex items-center gap-1.5 rounded-full bg-white/95 px-3 py-1.5 text-[11px] font-extrabold uppercase tracking-wide text-primary-700 shadow-sm">
-        <Users className="h-3.5 w-3.5" />
-        {label}
-      </span>
+      {scrim && <div className="hero-scrim absolute inset-0" />}
+      {label && (
+        <span className="absolute left-3 top-3 inline-flex items-center gap-1.5 rounded-full bg-white/95 px-3 py-1.5 text-[11px] font-extrabold uppercase tracking-wide text-primary-700 shadow-sm sm:left-4 sm:top-4">
+          <Users className="h-3.5 w-3.5" />
+          {label}
+        </span>
+      )}
+      {children}
     </div>
   );
 }
@@ -33,17 +47,20 @@ export function JoinedAvatarsRow({
   participants,
   totalJoined,
   unlocked,
+  bare = false,
 }: {
   participants: ParticipantResponse[];
   totalJoined: number;
   unlocked: boolean;
+  /** Drop the card chrome so this can nest inside another card. */
+  bare?: boolean;
 }) {
   const maxShown = 6;
   const shown = participants.slice(0, maxShown);
   const overflow = totalJoined - shown.length;
 
   return (
-    <div className="rounded-2xl border border-border bg-card p-4">
+    <div className={bare ? "" : "rounded-3xl border border-border bg-card p-4 sm:p-5"}>
       <div className="flex items-center gap-3">
         <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-primary-600">
           <Users className="h-5 w-5 text-white" />
@@ -112,13 +129,20 @@ export function DiscountBadge({
   originalPrice,
   currentPrice,
   percentOff,
+  bare = false,
 }: {
   originalPrice: number;
   currentPrice: number;
   percentOff: number;
+  /** Drop the card chrome so this can nest inside another card. */
+  bare?: boolean;
 }) {
   return (
-    <div className="flex items-center gap-4 rounded-2xl border border-border bg-card p-4">
+    <div
+      className={`flex items-center gap-4 ${
+        bare ? "" : "rounded-3xl border border-border bg-card p-4 sm:p-5"
+      }`}
+    >
       {percentOff > 0 && (
         <div className="starburst flex h-[72px] w-[72px] flex-shrink-0 items-center justify-center text-white">
           <div className="flex flex-col items-center leading-none">
@@ -149,7 +173,16 @@ export function DiscountBadge({
 
 // ── Share button ─────────────────────────────────────────────────────────────
 
-export function ShareButton({ title, url }: { title: string; url: string }) {
+export function ShareButton({
+  title,
+  url,
+  /** "overlay" = white pill with a label, for use on top of a hero scrim. */
+  variant = "icon",
+}: {
+  title: string;
+  url: string;
+  variant?: "icon" | "overlay";
+}) {
   async function handleShare() {
     const text = `Join "${title}" on CommunityDeals — ${url}`;
     if (typeof navigator !== "undefined" && navigator.share) {
@@ -168,10 +201,23 @@ export function ShareButton({ title, url }: { title: string; url: string }) {
     }
   }
 
+  if (variant === "overlay") {
+    return (
+      <button
+        onClick={handleShare}
+        title="Share"
+        className="inline-flex items-center gap-1.5 rounded-full bg-white/95 px-3.5 py-2 text-[12px] font-extrabold text-primary-700 shadow-sm transition-colors hover:bg-white"
+      >
+        <Share2 className="h-3.5 w-3.5" />
+        Share
+      </button>
+    );
+  }
+
   return (
     <button
       onClick={handleShare}
-      className="flex h-8 w-8 items-center justify-center rounded-full text-primary-700 hover:bg-primary-50 dark:text-primary-400 dark:hover:bg-primary-900/30"
+      className="flex h-9 w-9 items-center justify-center rounded-full border border-border text-primary-700 transition-colors hover:bg-primary-50 dark:text-primary-400 dark:hover:bg-primary-900/30"
       title="Share"
     >
       <Share2 className="h-4 w-4" />

@@ -1,6 +1,17 @@
 import '../core/api_client.dart';
 import '../models/community.dart';
 
+/// Outcome of a join request. The backend returns APPROVED immediately for
+/// open communities, or PENDING when the community requires admin approval.
+class JoinCommunityResult {
+  const JoinCommunityResult({required this.status, required this.message});
+
+  final String status;
+  final String message;
+
+  bool get isPending => status == 'PENDING';
+}
+
 class CommunityService {
   CommunityService({ApiClient? api}) : _api = api ?? ApiClient.instance;
 
@@ -20,15 +31,18 @@ class CommunityService {
     return _parseList(data);
   }
 
+  /// Location-based discovery — the backend filters on city / PIN code / type.
   Future<List<Community>> discover({
     String? city,
+    String? pinCode,
     String? type,
     int page = 1,
     int limit = 20,
   }) async {
     final data = await _api.get('/communities', query: {
-      if (city != null) 'city': city,
-      if (type != null) 'type': type,
+      if (city != null && city.isNotEmpty) 'city': city,
+      if (pinCode != null && pinCode.isNotEmpty) 'pin_code': pinCode,
+      if (type != null && type.isNotEmpty) 'type': type,
       'page': page,
       'limit': limit,
     });
@@ -40,10 +54,13 @@ class CommunityService {
     return Community.fromJson(data);
   }
 
-  Future<String> join(String id, {String? inviteCode}) async {
+  Future<JoinCommunityResult> join(String id, {String? inviteCode}) async {
     final data = await _api.post('/communities/$id/join', body: {
-      if (inviteCode != null) 'invite_code': inviteCode,
+      if (inviteCode != null && inviteCode.isNotEmpty) 'invite_code': inviteCode,
     }) as Map<String, dynamic>;
-    return data['membership_status'] as String? ?? 'PENDING';
+    return JoinCommunityResult(
+      status: data['membership_status'] as String? ?? 'PENDING',
+      message: data['message'] as String? ?? 'Join request sent',
+    );
   }
 }

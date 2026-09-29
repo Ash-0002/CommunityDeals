@@ -25,6 +25,27 @@ export function formatTime(iso: string | null | undefined): string {
   return d.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true });
 }
 
+type Located = {
+  city?: string;
+  state?: string;
+  pin_code?: string;
+  address?: string;
+};
+
+/** Short "City, State" line — e.g. "Mumbai, Maharashtra". Empty when unknown. */
+export function shortLocation(c: Located | null | undefined): string {
+  if (!c) return "";
+  return [c.city, c.state].filter(Boolean).join(", ");
+}
+
+/** Full service address — e.g. "12 Palm Rd, Mumbai, Maharashtra 400053". */
+export function fullLocation(c: Located | null | undefined): string {
+  if (!c) return "";
+  const line = [c.address, c.city, c.state].filter(Boolean).join(", ");
+  if (!line) return c.pin_code ?? "";
+  return c.pin_code ? `${line} ${c.pin_code}` : line;
+}
+
 export function daysLeft(iso: string | null | undefined): string {
   if (!iso) return "";
   const d = new Date(iso);

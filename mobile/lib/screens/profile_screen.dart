@@ -15,7 +15,7 @@ class ProfileScreen extends StatelessWidget {
 
     final menu = <(IconData, String, VoidCallback)>[
       (Icons.settings_outlined, 'Settings', () => context.push('/settings')),
-      (Icons.groups_outlined, 'My Communities', () => context.go('/')),
+      (Icons.groups_outlined, 'My Communities', () => context.push('/communities')),
       (Icons.receipt_long_outlined, 'Booking History', () => context.go('/campaigns')),
       (
         Icons.ios_share,

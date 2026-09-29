@@ -23,6 +23,7 @@ import (
 	"github.com/community-platform/backend/internal/database"
 	"github.com/community-platform/backend/internal/domain"
 	"github.com/community-platform/backend/internal/repository"
+	"github.com/jmoiron/sqlx"
 )
 
 func main() {
@@ -104,8 +105,35 @@ func main() {
 	}
 	fmt.Printf("✓ %d members in %q\n", len(users), community.Name)
 
+	// Extra societies in other cities that the demo user is NOT a member of,
+	// so the "find your society" search has something to actually find.
+	neighbours := []communitySeed{
+		{name: "Sunrise Residency", inviteCode: "SNR2024", city: "Pune",
+			state: "Maharashtra", pinCode: "411045", address: "Sunrise Residency, Wakad",
+			description: "120-flat gated society in Wakad.", requiresApproval: false},
+		{name: "Palm Grove Apartments", inviteCode: "PLM2024", city: "Pune",
+			state: "Maharashtra", pinCode: "411057", address: "Palm Grove, Hinjewadi Phase 2",
+			description: "80 flats next to the IT park.", requiresApproval: true},
+		{name: "Lake View Heights", inviteCode: "LKV2024", city: "Mumbai",
+			state: "Maharashtra", pinCode: "400076", address: "Lake View Heights, Powai",
+			description: "Lakeside towers in Powai.", requiresApproval: false},
+	}
+	for _, n := range neighbours {
+		c, err := ensureCommunityFrom(ctx, communityRepo, n, vendor.ID)
+		if err != nil {
+			log.Fatalf("seed community %s: %v", n.name, err)
+		}
+		// A few members each so they don't look abandoned in search results.
+		for _, u := range users[20:] {
+			if err := ensureMember(ctx, communityRepo, c.ID, u.ID); err != nil {
+				log.Fatalf("add member to %s: %v", n.name, err)
+			}
+		}
+	}
+	fmt.Printf("✓ %d more societies to discover (Pune & Mumbai)\n", len(neighbours))
+
 	// ── 3. Campaigns ────────────────────────────────────────────────────────
-	acService, err := ensureCampaign(ctx, campaignRepo, campaignSeed{
+	acService, err := ensureCampaign(ctx, db, campaignRepo, campaignSeed{
 		communityID: community.ID,
 		vendorID:    vendor.ID,
 		serviceName: "AC Service",
@@ -132,7 +160,7 @@ func main() {
 		log.Fatalf("join AC Service: %v", err)
 	}
 
-	carWash, err := ensureCampaign(ctx, campaignRepo, campaignSeed{
+	carWash, err := ensureCampaign(ctx, db, campaignRepo, campaignSeed{
 		communityID: community.ID,
 		vendorID:    vendor.ID,
 		serviceName: "Car Wash",
@@ -158,7 +186,7 @@ func main() {
 		log.Fatalf("join Car Wash: %v", err)
 	}
 
-	cleaning, err := ensureCampaign(ctx, campaignRepo, campaignSeed{
+	cleaning, err := ensureCampaign(ctx, db, campaignRepo, campaignSeed{
 		communityID: community.ID,
 		vendorID:    vendor.ID,
 		serviceName: "Deep Cleaning",
@@ -194,15 +222,21 @@ func main() {
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
+type communitySeed struct {
+	name, description, inviteCode string
+	city, state, pinCode, address string
+	requiresApproval              bool
+}
+
 type tierSeed struct {
 	min, max int
 	price    int64 // paise
 }
 
 type campaignSeed struct {
-	communityID, vendorID           string
-	serviceName, title, description string
-	imageURL                        string
+	communityID, vendorID            string
+	serviceName, title, description  string
+	imageURL                         string
 	minParticipants, maxParticipants int
 	serviceDaysOut, endHoursOut      int
 	tiers                            []tierSeed
@@ -231,23 +265,34 @@ func ensureUser(ctx context.Context, repo repository.UserRepository, phone, name
 }
 
 func ensureCommunity(ctx context.Context, repo repository.CommunityRepository, createdByID string) (*domain.Community, error) {
-	const inviteCode = "GVS2024"
-	if c, err := repo.FindByInviteCode(ctx, inviteCode); err == nil {
+	return ensureCommunityFrom(ctx, repo, communitySeed{
+		name:        "Green Valley Society",
+		description: "A 200-flat residential society in Baner, Pune.",
+		inviteCode:  "GVS2024",
+		city:        "Pune",
+		state:       "Maharashtra",
+		pinCode:     "411045",
+		address:     "Green Valley Society, Baner Road",
+	}, createdByID)
+}
+
+func ensureCommunityFrom(ctx context.Context, repo repository.CommunityRepository, s communitySeed, createdByID string) (*domain.Community, error) {
+	if c, err := repo.FindByInviteCode(ctx, s.inviteCode); err == nil {
 		return c, nil
 	}
 	now := time.Now()
 	c := &domain.Community{
 		ID:               newID(),
-		Name:             "Green Valley Society",
-		Description:      "A 200-flat residential society in Baner, Pune.",
+		Name:             s.name,
+		Description:      s.description,
 		Type:             domain.CommunityTypeSociety,
 		Status:           domain.CommunityStatusActive,
-		City:             "Pune",
-		State:            "Maharashtra",
-		PinCode:          "411045",
-		Address:          "Green Valley Society, Baner Road",
-		RequiresApproval: false,
-		InviteCode:       inviteCode,
+		City:             s.city,
+		State:            s.state,
+		PinCode:          s.pinCode,
+		Address:          s.address,
+		RequiresApproval: s.requiresApproval,
+		InviteCode:       s.inviteCode,
 		CreatedByID:      createdByID,
 		CreatedAt:        now,
 		UpdatedAt:        now,
@@ -280,11 +325,17 @@ func ensureMember(ctx context.Context, repo repository.CommunityRepository, comm
 	return nil
 }
 
-func ensureCampaign(ctx context.Context, repo repository.CampaignRepository, s campaignSeed) (*domain.Campaign, error) {
+func ensureCampaign(ctx context.Context, db *sqlx.DB, repo repository.CampaignRepository, s campaignSeed) (*domain.Campaign, error) {
 	existing, _, err := repo.List(ctx, repository.CampaignFilter{CommunityID: s.communityID, Page: 1, Limit: 50})
 	if err == nil {
 		for _, c := range existing {
 			if c.Title == s.title {
+				// Re-running the seed days later would otherwise leave the demo
+				// with lapsed deadlines, and an expired campaign can't be joined.
+				// Slide the dates forward so the demo is always live.
+				if err := refreshCampaignDates(ctx, db, c, s); err != nil {
+					return nil, fmt.Errorf("refreshing dates: %w", err)
+				}
 				return c, nil
 			}
 		}
@@ -329,6 +380,32 @@ func ensureCampaign(ctx context.Context, repo repository.CampaignRepository, s c
 		return nil, err
 	}
 	return c, nil
+}
+
+// refreshCampaignDates slides an existing demo campaign's window to be
+// relative to now, and clears EXPIRED so it becomes joinable again.
+func refreshCampaignDates(ctx context.Context, db *sqlx.DB, c *domain.Campaign, s campaignSeed) error {
+	now := time.Now()
+	_, err := db.ExecContext(ctx, `
+		UPDATE campaigns
+		SET service_date = $1,
+		    start_date   = $2,
+		    end_date     = $3,
+		    status       = CASE WHEN status = 'EXPIRED' THEN 'PUBLISHED' ELSE status END,
+		    updated_at   = $4
+		WHERE id = $5
+	`,
+		now.Add(time.Duration(s.serviceDaysOut)*24*time.Hour),
+		now.Add(-24*time.Hour),
+		now.Add(time.Duration(s.endHoursOut)*time.Hour),
+		now,
+		c.ID,
+	)
+	if err != nil {
+		return err
+	}
+	c.EndDate = now.Add(time.Duration(s.endHoursOut) * time.Hour)
+	return nil
 }
 
 func joinUsers(ctx context.Context, repo repository.CampaignRepository, campaignID string, users []*domain.User) error {

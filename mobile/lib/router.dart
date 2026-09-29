@@ -8,6 +8,7 @@ import 'screens/home_shell.dart';
 import 'screens/dashboard_screen.dart';
 import 'screens/campaigns_screen.dart';
 import 'screens/campaign_detail_screen.dart';
+import 'screens/communities_screen.dart';
 import 'screens/create_campaign_screen.dart';
 import 'screens/public_campaign_screen.dart';
 import 'screens/profile_screen.dart';
@@ -60,6 +61,10 @@ GoRouter buildRouter(AuthController auth) {
       GoRoute(
         path: '/settings',
         builder: (_, __) => const SettingsScreen(),
+      ),
+      GoRoute(
+        path: '/communities',
+        builder: (_, __) => const CommunitiesScreen(),
       ),
       ShellRoute(
         builder: (_, __, child) => HomeShell(child: child),

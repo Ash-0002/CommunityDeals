@@ -375,6 +375,13 @@ func calculateCurrentPrice(tiers []*domain.CampaignPricingTier, count int) int64
 			return t.Price
 		}
 	}
+	// Below the first bracket (a brand-new campaign sits at 0 participants,
+	// and tier 1 starts at 1) nothing matches. That must fall back to the
+	// starting price, not tiers[last] — otherwise an empty campaign advertises
+	// the deepest group discount nobody has earned yet.
+	if count < tiers[0].MinCount {
+		return tiers[0].Price
+	}
 	return tiers[len(tiers)-1].Price
 }
 
@@ -393,8 +400,12 @@ func findCurrentTier(tiers []*domain.CampaignPricingTier, count int) *domain.Cam
 
 // findNextTier returns the next cheaper tier above the current count.
 func findNextTier(tiers []*domain.CampaignPricingTier, count int) *domain.CampaignPricingTier {
+	current := calculateCurrentPrice(tiers, count)
 	for _, t := range tiers {
-		if t.MinCount > count {
+		// Only a genuinely cheaper bracket is worth chasing. Without the price
+		// check, an empty campaign reports "1 more to unlock <the price it is
+		// already showing>".
+		if t.MinCount > count && t.Price < current {
 			return t
 		}
 	}

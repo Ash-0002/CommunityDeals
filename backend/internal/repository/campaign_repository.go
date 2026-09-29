@@ -201,11 +201,13 @@ func (r *campaignRepository) JoinCampaign(ctx context.Context, campaignID, userI
 	if err != nil {
 		return nil, 0, fmt.Errorf("begin transaction: %w", err)
 	}
-	defer func() {
-		if err != nil {
-			_ = tx.Rollback()
-		}
-	}()
+	// Unconditional rollback: after a successful Commit this is a no-op
+	// (returns sql.ErrTxDone). Rolling back only when `err != nil` leaks the
+	// transaction on every business-rule early return below — ErrAlreadyJoined,
+	// ErrCampaignFull, expired, not-joinable — none of which assign to `err`.
+	// A leaked transaction holds the SELECT ... FOR UPDATE lock on the campaign
+	// row, which blocks every subsequent join until the connection is recycled.
+	defer func() { _ = tx.Rollback() }()
 
 	// ── Step 1: Lock the campaign row ─────────────────────────────────────────
 	// SELECT FOR UPDATE prevents any other transaction from reading or modifying
@@ -316,11 +318,10 @@ func (r *campaignRepository) LeaveCampaign(ctx context.Context, campaignID, user
 	if err != nil {
 		return 0, fmt.Errorf("begin transaction: %w", err)
 	}
-	defer func() {
-		if err != nil {
-			_ = tx.Rollback()
-		}
-	}()
+	// See JoinCampaign — unconditional rollback, no-op after Commit. The
+	// "cannot leave a campaign with status X" return below never assigns to
+	// `err`, so a conditional rollback would leak the row lock.
+	defer func() { _ = tx.Rollback() }()
 
 	// Lock campaign
 	var campaign domain.Campaign
@@ -348,8 +349,7 @@ func (r *campaignRepository) LeaveCampaign(ctx context.Context, campaignID, user
 
 	rowsAffected, _ := result.RowsAffected()
 	if rowsAffected == 0 {
-		_ = tx.Rollback()
-		return 0, ErrNotJoined
+		return 0, ErrNotJoined // deferred rollback releases the lock
 	}
 
 	// Decrement count

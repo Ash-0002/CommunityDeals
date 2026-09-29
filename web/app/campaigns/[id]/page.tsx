@@ -1,16 +1,16 @@
 "use client";
 
 // Authenticated campaign detail — /campaigns/[id]
-// Full campaign view with a working join/cancel action.
+// Editorial layout; the join / cancel action lives in the sticky join card.
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
 import { AppLayout } from "@/components/layout/app-layout";
-import { CampaignDetailBody } from "@/components/campaign/campaign-detail-body";
+import { CampaignEditorial } from "@/components/campaign/campaign-detail-body";
 import { Button } from "@/components/ui/button";
 import { api, APIError } from "@/lib/api";
-import type { CampaignResponse, ParticipantResponse } from "@/lib/types";
+import type { CampaignResponse, CommunityResponse, ParticipantResponse } from "@/lib/types";
 
 export default function CampaignDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -18,25 +18,34 @@ export default function CampaignDetailPage() {
 
   const [campaign, setCampaign] = useState<CampaignResponse | null>(null);
   const [participants, setParticipants] = useState<ParticipantResponse[]>([]);
+  const [community, setCommunity] = useState<CommunityResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [acting, setActing] = useState(false);
   const [toast, setToast] = useState("");
   const [confirmingCancel, setConfirmingCancel] = useState(false);
 
-  function load() {
+  const load = useCallback(() => {
     setLoading(true);
     setError("");
     Promise.all([api.campaigns.get(id), api.campaigns.participants(id)])
       .then(([c, p]) => {
         setCampaign(c);
         setParticipants(p.participants);
+        // The community carries the society name + location. Best effort —
+        // a viewer who isn't a member simply gets no location block.
+        api.communities
+          .get(c.community_id)
+          .then(setCommunity)
+          .catch(() => setCommunity(null));
       })
       .catch((err) => setError(err instanceof APIError ? err.message : "Failed to load campaign"))
       .finally(() => setLoading(false));
-  }
+  }, [id]);
 
-  useEffect(load, [id]);
+  useEffect(() => {
+    load();
+  }, [load]);
 
   async function doToggleJoin() {
     if (!campaign) return;
@@ -71,58 +80,62 @@ export default function CampaignDetailPage() {
 
   return (
     <AppLayout>
-      <div className="flex items-center gap-3 border-b border-border bg-card px-6 py-4">
-        <button onClick={() => router.back()} className="rounded-md p-1 text-muted hover:bg-surface hover:text-ink">
-          <ChevronLeft className="h-4 w-4" />
-        </button>
-        <h1 className="text-sm font-semibold text-ink">Deal details</h1>
-      </div>
+      <button
+        onClick={() => router.back()}
+        className="mb-4 inline-flex items-center gap-1 rounded-full border border-border bg-card px-3.5 py-1.5 text-[13px] font-semibold text-muted transition-colors hover:text-ink"
+      >
+        <ChevronLeft className="h-4 w-4" />
+        Back
+      </button>
 
-      <div className="flex-1 overflow-y-auto px-6 py-6">
-        <div className="mx-auto max-w-xl">
-          {loading ? (
-            <p className="text-sm text-muted">Loading…</p>
-          ) : error || !campaign ? (
-            <p className="text-sm text-red-500">{error || "Campaign not found"}</p>
-          ) : (
-            <>
-              <CampaignDetailBody campaign={campaign} participants={participants} />
-
-              {toast && <p className="mt-4 text-center text-sm font-medium text-ink">{toast}</p>}
-
-              {confirmingCancel ? (
-                <div className="mt-6 rounded-xl border border-border bg-card p-4">
-                  <p className="mb-3 text-sm text-ink">
-                    You&apos;ll leave &quot;{campaign.title}&quot; and lose your locked-in price. You can rejoin
-                    later if the deal is still open.
-                  </p>
-                  <div className="flex gap-2">
-                    <Button fullWidth variant="outline" onClick={() => setConfirmingCancel(false)}>
-                      Keep my spot
-                    </Button>
-                    <Button fullWidth variant="danger" loading={acting} onClick={doToggleJoin}>
-                      Cancel spot
-                    </Button>
-                  </div>
-                </div>
-              ) : (
-                <div className="mt-6">
-                  <Button
-                    fullWidth
-                    size="lg"
-                    variant={campaign.is_joined ? "danger" : "primary"}
-                    loading={acting}
-                    disabled={closed}
-                    onClick={handleActionClick}
-                  >
-                    {closed ? "Deal closed" : campaign.is_joined ? "Cancel my spot" : "Join this deal"}
+      {loading ? (
+        <p className="text-sm text-muted">Loading…</p>
+      ) : error || !campaign ? (
+        <p className="text-sm text-red-500">{error || "Campaign not found"}</p>
+      ) : (
+        <CampaignEditorial
+          campaign={campaign}
+          participants={participants}
+          community={community}
+          action={
+            confirmingCancel ? (
+              // Confirmation step before giving up a locked-in spot.
+              <div className="rounded-2xl border border-red-200 p-3.5 dark:border-red-900/50">
+                <p className="mb-3 text-[13px] leading-relaxed text-ink">
+                  You&apos;ll leave this deal and lose your locked-in price. You can rejoin later if
+                  it&apos;s still open.
+                </p>
+                <div className="flex flex-col gap-2">
+                  <Button fullWidth variant="outline" onClick={() => setConfirmingCancel(false)}>
+                    Keep my spot
+                  </Button>
+                  <Button fullWidth variant="danger" loading={acting} onClick={doToggleJoin}>
+                    Cancel spot
                   </Button>
                 </div>
-              )}
-            </>
-          )}
-        </div>
-      </div>
+              </div>
+            ) : (
+              <Button
+                fullWidth
+                size="lg"
+                variant={campaign.is_joined ? "danger" : "primary"}
+                loading={acting}
+                disabled={closed}
+                onClick={handleActionClick}
+              >
+                {closed ? "Deal closed" : campaign.is_joined ? "Cancel my spot" : "Join this deal"}
+              </Button>
+            )
+          }
+          actionNote={
+            toast ? (
+              <span className="font-semibold text-ink">{toast}</span>
+            ) : (
+              "No payment now · Pay only when the group is confirmed"
+            )
+          }
+        />
+      )}
     </AppLayout>
   );
 }

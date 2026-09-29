@@ -9,6 +9,8 @@
   --border:  #e2e8f0;
   --muted:   #64748b;
   --ink:     #0f172a;
+  /* Translucent variant of --card, for the floating glass nav bars. */
+  --card-glass: rgba(255, 255, 255, 0.72);
 }
 
 .dark {
@@ -17,6 +19,7 @@
   --border:  #334155;
   --muted:   #94a3b8;
   --ink:     #f1f5f9;
+  --card-glass: rgba(30, 41, 59, 0.74);
 }
 
 @layer base {
@@ -33,6 +36,31 @@
 
 @layer utilities {
   .num { font-variant-numeric: tabular-nums; }
+
+  /* Frosted translucent surface for the floating nav bars. Falls back to the
+     opaque --card when backdrop-filter is unavailable. */
+  .glass {
+    background-color: var(--card);
+  }
+  @supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    .glass {
+      background-color: var(--card-glass);
+      -webkit-backdrop-filter: blur(16px) saturate(150%);
+      backdrop-filter: blur(16px) saturate(150%);
+    }
+  }
+
+  /* Gradient scrim so overlaid hero text stays legible on any image, in
+     either theme (the scrim is intentionally dark in both). */
+  .hero-scrim {
+    background: linear-gradient(
+      to top,
+      rgba(2, 6, 16, 0.88) 0%,
+      rgba(2, 6, 16, 0.55) 38%,
+      rgba(2, 6, 16, 0.12) 70%,
+      rgba(2, 6, 16, 0.05) 100%
+    );
+  }
 }
 
 /* Starburst "% OFF" badge — a 12-point scalloped circle. */

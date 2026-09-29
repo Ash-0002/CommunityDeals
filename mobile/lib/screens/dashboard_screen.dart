@@ -272,13 +272,34 @@ class _CommunitiesStrip extends StatelessWidget {
       return Card(
         child: Padding(
           padding: const EdgeInsets.all(16),
-          child: Row(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Icon(Icons.groups_outlined, color: AppColors.primary),
-              const SizedBox(width: 12),
-              const Expanded(
-                child: Text('You have not joined a community yet.',
-                    style: TextStyle(fontWeight: FontWeight.w600)),
+              Row(
+                children: const [
+                  Icon(Icons.groups_outlined, color: AppColors.primary),
+                  SizedBox(width: 12),
+                  Expanded(
+                    child: Text('You have not joined a society yet.',
+                        style: TextStyle(fontWeight: FontWeight.w600)),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              const Text(
+                'Deals run inside a society — find yours to start saving.',
+                style: TextStyle(fontSize: 12, color: AppColors.lightMuted),
+              ),
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton(
+                  style: FilledButton.styleFrom(
+                    minimumSize: const Size.fromHeight(44),
+                  ),
+                  onPressed: () => context.push('/communities'),
+                  child: const Text('Find your society'),
+                ),
               ),
             ],
           ),
@@ -288,11 +309,20 @@ class _CommunitiesStrip extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('My communities',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
-        const SizedBox(height: 12),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text('My societies',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
+            TextButton(
+              onPressed: () => context.push('/communities'),
+              child: const Text('Find more'),
+            ),
+          ],
+        ),
+        const SizedBox(height: 4),
         SizedBox(
-          height: 92,
+          height: 108,
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
             itemCount: communities.length,
@@ -316,6 +346,24 @@ class _CommunitiesStrip extends StatelessWidget {
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
                             fontWeight: FontWeight.w800, fontSize: 14)),
+                    if (c.city?.isNotEmpty == true) ...[
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          const Icon(Icons.location_on_outlined,
+                              size: 12, color: AppColors.lightMuted),
+                          const SizedBox(width: 3),
+                          Expanded(
+                            child: Text(c.city!,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                    fontSize: 11.5,
+                                    color: AppColors.lightMuted)),
+                          ),
+                        ],
+                      ),
+                    ],
                     const SizedBox(height: 4),
                     Text('${c.memberCount} members',
                         style: const TextStyle(
